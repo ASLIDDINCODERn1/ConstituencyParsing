@@ -1,0 +1,19 @@
+# Model files (too large for GitHub, downloaded from HuggingFace at runtime)
+backend/models/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs
+*.log
+
+# Environment
+.env
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db

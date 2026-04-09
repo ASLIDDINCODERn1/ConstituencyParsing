@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>O'zbek tili — Dependency Parser</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-wrapper" id="appWrapper">
+
+        <!-- ═══ Sidebar ═══════════════════════════════════════════════ -->
+        <aside class="sidebar" id="sidebar">
+            <div class="logo">Dependency<span>Parser</span></div>
+            <div class="desc">O'zbek tili uchun sintaktik tahlil tizimi</div>
+
+            <div class="sidebar-section">
+                <label class="sidebar-label">MODEL VERSIYASI</label>
+                <select id="modelVersion" class="sidebar-select">
+                    <option value="v8">V8 — Asosiy (LAS: 79%)</option>
+                    <option value="v1">V1 — Boshlang'ich (LAS: 47%)</option>
+                </select>
+            </div>
+
+            <div class="sidebar-section">
+                <label class="sidebar-label">BACKEND URL</label>
+                <input type="text" id="apiUrl" class="sidebar-input"
+                       placeholder="http://localhost:8000">
+            </div>
+
+            <div id="apiStatus" class="db-status">Backend tekshirilmoqda...</div>
+
+            <div class="sidebar-stats" id="sidebarStats">
+                <div class="stat-row"><span>Tokenlar:</span><span id="statTokens">—</span></div>
+                <div class="stat-row"><span>Ildiz so'z:</span><span id="statRoot">—</span></div>
+                <div class="stat-row"><span>Versiya:</span><span id="statVersion">—</span></div>
+            </div>
+
+            <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 Dark</button>
+        </aside>
+
+        <!-- ═══ Main ══════════════════════════════════════════════════ -->
+        <main class="content">
+
+            <!-- Topbar -->
+            <div class="topbar">
+                <button class="sidebar-toggle" onclick="toggleSidebar()" title="Sidebar">&#9776;</button>
+                <span class="topbar-title">O'ZBEK TILI — DEPENDENCY PARSER</span>
+            </div>
+
+            <!-- Input card -->
+            <section class="card" id="cardInput">
+                <div class="card-header" onclick="toggleCard('cardInput')">
+                    <div class="card-label">MATN KIRITISH</div>
+                    <span class="chevron">&#9650;</span>
+                </div>
+                <div class="card-body">
+                    <div class="input-wrap">
+                        <textarea id="inputText"
+                            placeholder="O'zbek tilida gap kiriting... (masalan: Bolalar bog'da o'ynashmoqda.)&#10;Tahlil uchun Ctrl+Enter bosing"></textarea>
+                        <ul id="suggestionList" class="suggestion-list"></ul>
+                    </div>
+                    <div class="input-actions">
+                        <button id="runBtn" onclick="startAnalysis()">TAHLILNI BOSHLASH</button>
+                        <button class="btn-secondary" onclick="clearAll()">&#10005; TOZALASH</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Arc Diagram card -->
+            <section class="card" id="cardTree">
+                <div class="card-header" onclick="toggleCard('cardTree')">
+                    <div class="card-label">DEPENDENCY DIAGRAM (Arc)</div>
+                    <span class="chevron">&#9650;</span>
+                </div>
+                <div class="card-body">
+                    <div id="treeCanvas" class="canvas">
+                        <div class="canvas-placeholder">
+                            <svg width="56" height="40" viewBox="0 0 56 40" fill="none">
+                                <path d="M4 36 Q14 8 28 8 Q42 8 52 36"
+                                      stroke="#334155" stroke-width="2" fill="none"/>
+                                <circle cx="4"  cy="36" r="3" fill="#334155"/>
+                                <circle cx="28" cy="8"  r="3" fill="#00ff88"/>
+                                <circle cx="52" cy="36" r="3" fill="#334155"/>
+                            </svg>
+                            <p>Matn kiriting va "Tahlilni boshlash" tugmasini bosing</p>
+                        </div>
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn-secondary" onclick="downloadSVG()">&#8675; SVG</button>
+                        <button class="btn-secondary" onclick="downloadPNG()">&#8675; PNG</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Table card -->
+            <section class="card" id="cardTable">
+                <div class="card-header" onclick="toggleCard('cardTable')">
+                    <div class="card-label">LINGVISTIK TAHLIL JADVALI</div>
+                    <span class="chevron">&#9650;</span>
+                </div>
+                <div class="card-body">
+                    <div class="table-container">
+                        <table id="dataTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Token</th>
+                                    <th>Lemma</th>
+                                    <th>UPOS</th>
+                                    <th>UZ Tagi</th>
+                                    <th>Head ID</th>
+                                    <th>Head Token</th>
+                                    <th>Deprel</th>
+                                    <th>Root?</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn-secondary" onclick="downloadXLSX()">&#8675; XLSX</button>
+                        <button class="btn-secondary btn-conll" onclick="downloadCoNLL()">&#8675; CoNLL-U</button>
+                        <button class="btn-secondary" onclick="copyTableData(this)">&#9112; NUSXA</button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- SheetJS for XLSX fallback -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

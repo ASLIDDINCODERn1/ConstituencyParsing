@@ -1,0 +1,94 @@
+O‘zbek tili matnlarini tarkibiy tahlil qiluvchi (Constituency Parsing) intellektual dasturiy tizim
+1. KIRISH
+Tabiiy tilni qayta ishlash (NLP) sohasida o‘zbek tili uchun sintaktik tahlil tizimlarini yaratish muhim masalalardan biridir. Ushbu loyihaning maqsadi o‘zbek tili gaplarini Constituency Parsing (tarkibiy bo‘laklarga ajratish) usuli orqali tahlil qiluvchi, lingvistik va vizual ko‘rinishda natija beruvchi veb-ilovini yaratishdan iborat.
+
+Dastur an’anaviy "Dependency Parsing" (tobe’lik tahlili) dan farqli o‘laroq, gapni iboralarga (fraza) ajratishga asoslanadi. Bu usul "Phrase Structure Grammar" (Iboralar strukturasi grammatikasi) nazariyasiga tayanadi.
++1
+
+2. DASTURNING ILMIY-LINGVISTIK ASOSLARI
+Tizim quyidagi xalqaro va milliy lingvistik standartlarga asoslanadi:
+
+2.1. Tahlil Birliklarii (Tagset)
+Dastur Penn Treebank standartining o‘zbek tiliga moslashtirilgan versiyasidan foydalanadi:
+
+S (Sentence): Gapning eng yuqori tuguni (ildiz).
+
+NP (Noun Phrase): Otli birikma (Masalan: "Buyuk kelajak").
+
+VP (Verb Phrase): Fe’lli birikma (Masalan: "qurmoqdamiz").
+
+ADJP (Adjective Phrase): Sifat birikmasi.
+
+PP (Prepositional Phrase): Ko‘makchili birikma.
+
+2.2. BIO Tizimi va Chunking
+Lingvistik jadvalda so‘zlar BIO (Begin, Inside, Outside) standarti bo‘yicha belgilanadi:
+
+B-NP: Otli birikmaning boshi.
+
+I-NP: Otli birikmaning davomi/ichki qismi.
+
+
+O: Birikmaga kirmagan elementlar (tinish belgilari).
+
+3. TIZIM ARXITEKTURASI VA TEXNOLOGIK YECHIMLAR
+Dastur mijoz-server (Client-Server) arxitekturasida va Gibrid intellektual yondashuv asosida ishlaydi.
+
+3.1. Foydalanilgan Texnologiyalar
+Frontend: HTML5, CSS3 (Modern UI/UX), JavaScript (ES6+).
+
+Vizualizatsiya: SVG (Scalable Vector Graphics) – dinamik daraxt chizish uchun.
+
+AI Engine: Groq API orqali ishlovchi Llama-3.3-70B modeli.
+
+Ma'lumotlar formati: JSON (JavaScript Object Notation).
+
+3.2. Gibrid Tahlil Algoritmi (Flowchart)
+Dastur tezkorlik va aniqlikni ta'minlash uchun ikki bosqichli tekshiruvdan foydalanadi:
+
+Bosqich 1 (Offline/Cache Mode): Foydalanuvchi kiritgan matn dastlab lokal data.txt bazasidan qidiriladi. Agar matn avval tahlil qilingan bo‘lsa, natija bir zumda (0.1 soniyada) chiqariladi. Bu server resurslarini tejaydi.
+
+Bosqich 2 (AI Generation): Agar matn bazada bo‘lmasa, tizim Prompt Engineering usuli orqali Groq AI ga so‘rov yuboradi.
+
+4. PROMPT MUHANDISLIGI (PROMPT ENGINEERING)
+Sun’iy intellektning "gallyutsinatsiya" (xato to‘qish) holatlarini oldini olish va 100% deterministik (bir xil) natija olish uchun quyidagi ilmiy yechimlar qo‘llanildi:
+
+Role-Playing: AI ga "Professional O‘zbek tili lingvisti" roli berildi.
+
+Few-Shot Prompting: AI ga kutilayotgan natija bo‘yicha aniq JSON namunasi (Example) berildi.
+
+Deterministic Parameters:
+
+Temperature: 0.0 – Tasodifiylik butunlay o‘chirildi.
+
+Seed: 12345 – Generatsiya jarayoni matematik qulflandi. Bu har safar bir xil va ilmiy jihatdan to‘g‘ri javob chiqishini kafolatlaydi.
+
+5. DASTURNING FUNKSIONAL IMKONIYATLARI
+5.1. Grafik Tahlil (Tree Visualization)
+Gapning sintaktik tuzilishi Iyerarxik Daraxt ko‘rinishida chiziladi.
+
+Yuqori tugun: S (Gap).
+
+Oraliq tugunlar: NP, VP (Birikmalar).
+
+Quyi tugunlar (Barglar): Tokenlar (So‘zlar). Bu talabalar va tadqiqotchilarga gap qurilishini vizual anglashga yordam beradi.
+
+5.2. Lingvistik Jadval
+Har bir so‘z bo‘yicha quyidagi morfologik va sintaktik ma’lumotlar jadvalda aks etadi:
+
+Token: So‘zning asl shakli.
+
+Lemma: So‘zning o‘zagi.
+
+POS Tag: So‘z turkumi (N, V, JJ, RR).
+
+Chunk Tag: Sintaktik guruh (B-NP, I-VP).
+
+6. XULOSA
+Ushbu "Constituency Parser" dasturi o‘zbek tili kompyuter lingvistikasi uchun zamonaviy yechim hisoblanadi. Uning asosiy yutuqlari:
+
+Aniqlik: Qat'iy prompt va haroratni (temperature) boshqarish orqali xatoliklar minimallashtirildi.
+
+Tezkorlik: Lokal baza va AI integratsiyasi hisobiga yuqori ishlash tezligiga erishildi.
+
+Vizualizatsiya: Murakkab lingvistik tahlilni tushunarli grafik ko‘rinishga o‘tkazib beradi.

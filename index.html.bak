@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <title>Constituency Parser</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-wrapper" id="appWrapper">
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="logo">Constituency<span>Parser</span></div>
+            <div class="desc">O'zbek tili uchun sintaktik tahlil tizimi</div>
+            <div id="dbStatus" class="db-status">Baza yuklanmoqda...</div>
+            <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 Dark</button>
+        </aside>
+
+        <!-- Main -->
+        <main class="content">
+
+            <!-- Topbar -->
+            <div class="topbar">
+                <button class="sidebar-toggle" onclick="toggleSidebar()" title="Sidebar">&#9776;</button>
+                <span class="topbar-title">Constituency Parser</span>
+            </div>
+
+            <!-- Input card -->
+            <section class="card" id="cardInput">
+                <div class="card-header" onclick="toggleCard('cardInput')">
+                    <div class="card-label">ASL MATN</div>
+                    <span class="chevron">&#9650;</span>
+                </div>
+                <div class="card-body">
+                    <div class="input-wrap">
+                        <textarea id="inputText" placeholder="Tahlil uchun gapni kiriting yoki qidiring..."></textarea>
+                        <ul id="suggestionList" class="suggestion-list"></ul>
+                    </div>
+                    <button id="runBtn" onclick="startAnalysis()">TAHLILNI BOSHLASH</button>
+                </div>
+            </section>
+
+            <!-- Tree card -->
+            <section class="card" id="cardTree">
+                <div class="card-header" onclick="toggleCard('cardTree')">
+                    <div class="card-label">DARAXT TAHLILI</div>
+                    <span class="chevron">&#9650;</span>
+                </div>
+                <div class="card-body">
+                    <div id="treeCanvas" class="canvas"></div>
+                    <div class="card-actions">
+                        <button class="btn-secondary" onclick="downloadPNG()">&#8675; PNG</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Table card -->
+            <section class="card" id="cardTable">
+                <div class="card-header" onclick="toggleCard('cardTable')">
+                    <div class="card-label">LINGVISTIK TA'MINOT</div>
+                    <span class="chevron">&#9650;</span>
+                </div>
+                <div class="card-body">
+                    <div class="table-container">
+                        <table id="dataTable">
+                            <thead>
+                                <tr>
+                                    <th>Sent_ID</th>
+                                    <th>Token_ID</th>
+                                    <th>Token</th>
+                                    <th>BI</th>
+                                    <th>Lemma</th>
+                                    <th>Tag</th>
+                                    <th>Chunk Tag</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn-secondary" onclick="downloadXLSX()">&#8675; XLSX</button>
+                        <button class="btn-secondary btn-conll" onclick="downloadCoNLL()" title="Stanza uchun CoNLL-U format">&#8675; CoNLL-U</button>
+                        <button class="btn-secondary btn-fasttext" onclick="downloadFastText()" title="FastText chunk classification formati">&#8675; FastText</button>
+                        <button class="btn-secondary" onclick="copyTableData()">&#9112; NUSXA</button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- SheetJS for XLSX export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
