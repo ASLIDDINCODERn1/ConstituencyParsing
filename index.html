@@ -13,12 +13,24 @@
         <!-- ═══ Header ════════════════════════════════════════════════════ -->
         <header class="header">
             <div class="header-inner">
-                <h1 class="title">O'zbek tili — Constituency Parser</h1>
-                <p class="subtitle">Gapni sintaktik tarkibiy qismlarga ajratish tizimi</p>
+                <div class="header-logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                        <circle cx="14" cy="6"  r="4" fill="#60a5fa"/>
+                        <circle cx="6"  cy="22" r="4" fill="#60a5fa"/>
+                        <circle cx="22" cy="22" r="4" fill="#60a5fa"/>
+                        <line x1="14" y1="10" x2="6"  y2="18" stroke="#94a3b8" stroke-width="1.5"/>
+                        <line x1="14" y1="10" x2="22" y2="18" stroke="#94a3b8" stroke-width="1.5"/>
+                    </svg>
+                    <h1 class="title">O'zbek tili — Constituency Parser</h1>
+                </div>
+                <p class="subtitle">Gapni sintaktik tarkibiy qismlarga ajratish tizimi (NP, VP, ADJP...)</p>
+
                 <div class="api-row">
-                    <label class="api-label">Groq API Key:</label>
+                    <span class="api-label">Groq API Key:</span>
                     <div class="api-field">
-                        <input type="password" id="apiKey" placeholder="gsk_..." class="api-input" autocomplete="off">
+                        <input type="password" id="apiKey"
+                               placeholder="gsk_... yoki console.groq.com dan oling"
+                               class="api-input" autocomplete="off">
                         <button onclick="saveKey()" class="btn-save">Saqlash</button>
                         <span id="keyStatus" class="key-status"></span>
                     </div>
@@ -29,32 +41,69 @@
         <main class="main">
 
             <!-- ═══ Asl matn ══════════════════════════════════════════════ -->
+            <div class="section-title">
+                <span class="section-num">1</span> Asl matn
+            </div>
             <div class="card">
-                <div class="card-title">Asl matn</div>
                 <div class="card-body">
-                    <textarea
-                        id="inputText"
-                        rows="4"
-                        placeholder="O'zbek tilida gap kiriting...&#10;Masalan: Tarix hayotning haqiqiy o'qituvchisidir.&#10;&#10;Tahlil uchun Ctrl+Enter bosing.">
-                    </textarea>
+                    <div class="input-wrap">
+                        <textarea
+                            id="inputText"
+                            rows="4"
+                            placeholder="O'zbek tilida gap kiriting...&#10;Masalan: Ali cesur kadından yardım aldı.&#10;&#10;Ctrl+Enter — tez tahlil"></textarea>
+                        <ul id="suggestionList" class="suggestion-list"></ul>
+                    </div>
                     <div class="btn-row">
-                        <button id="analyzeBtn" class="btn-primary" onclick="startAnalysis()">Tahlil qilish</button>
-                        <button class="btn-ghost" onclick="clearAll()">Tozalash</button>
+                        <button id="analyzeBtn" class="btn-primary" onclick="startAnalysis()">
+                            &#9654; Tahlil qilish
+                        </button>
+                        <button class="btn-ghost" onclick="clearAll()">&#10005; Tozalash</button>
+                        <span class="hint">Ctrl+Enter</span>
                     </div>
                 </div>
             </div>
 
             <!-- ═══ Matn tahlili ══════════════════════════════════════════ -->
+            <div class="section-title" id="resultTitle" style="display:none">
+                <span class="section-num">2</span> Matn tahlili
+            </div>
             <div class="card" id="cardResult" style="display:none">
-                <div class="card-title">Matn tahlili</div>
                 <div class="card-body">
 
                     <!-- Constituency tree -->
-                    <div class="tree-label">Constituency daraxt</div>
+                    <div class="sub-label">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="margin-right:5px">
+                            <circle cx="7" cy="2" r="1.8" fill="#1d4ed8"/>
+                            <circle cx="3" cy="12" r="1.8" fill="#1d4ed8"/>
+                            <circle cx="11" cy="12" r="1.8" fill="#1d4ed8"/>
+                            <line x1="7" y1="3.8" x2="3"  y2="10.2" stroke="#94a3b8" stroke-width="1.2"/>
+                            <line x1="7" y1="3.8" x2="11" y2="10.2" stroke="#94a3b8" stroke-width="1.2"/>
+                        </svg>
+                        Constituency daraxt (S → NP / VP)
+                    </div>
+
                     <div class="tree-box" id="treeBox"></div>
 
+                    <!-- Legend -->
+                    <div class="legend">
+                        <span class="leg-item"><span class="leg-dot" style="background:#dc2626"></span>S — Gap</span>
+                        <span class="leg-item"><span class="leg-dot" style="background:#1d4ed8"></span>NP — Otli birikma</span>
+                        <span class="leg-item"><span class="leg-dot" style="background:#16a34a"></span>VP — Fe'lli birikma</span>
+                        <span class="leg-item"><span class="leg-dot" style="background:#9333ea"></span>ADJP — Sifat</span>
+                        <span class="leg-item"><span class="leg-dot" style="background:#d97706"></span>ADVP — Ravish</span>
+                        <span class="leg-item"><span class="leg-dot" style="background:#0891b2"></span>PP — Ko'makchi</span>
+                    </div>
+
                     <!-- Linguistic table -->
-                    <div class="tree-label" style="margin-top:22px">Lingvistik ta'minot</div>
+                    <div class="sub-label" style="margin-top:28px">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="margin-right:5px">
+                            <rect x="1" y="1" width="12" height="12" rx="2" stroke="#1d4ed8" stroke-width="1.4" fill="none"/>
+                            <line x1="1" y1="5" x2="13" y2="5" stroke="#1d4ed8" stroke-width="1.2"/>
+                            <line x1="5" y1="5" x2="5"  y2="13" stroke="#1d4ed8" stroke-width="1"/>
+                        </svg>
+                        Lingvistik ta'minot jadvali
+                    </div>
+
                     <div class="table-box">
                         <table id="lingTable">
                             <thead>
@@ -72,7 +121,7 @@
                         </table>
                     </div>
 
-                    <!-- Copy / Download -->
+                    <!-- Copy & Download -->
                     <div class="copy-row">
                         <button class="btn-copy" onclick="copyTable(this)">&#9112; Nusxa olish</button>
                         <button class="btn-ghost" onclick="downloadSVG()">&#8675; SVG yuklab olish</button>
@@ -85,6 +134,10 @@
             <div id="errBox" class="err-box" style="display:none"></div>
 
         </main>
+
+        <footer class="footer">
+            O'zbek tili Constituency Parser &mdash; Groq LLaMA 3.3 70B &bull; 2025
+        </footer>
     </div>
 
     <script src="script.js"></script>

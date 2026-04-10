@@ -5,60 +5,79 @@
 const GROQ_URL   = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 
-const SYSTEM_PROMPT = `Sen o'zbek tili constituency parsing tizimisan.
-Foydalanuvchi o'zbek tilidagi gap beradi. Sen FAQAT quyidagi JSON formatida javob berasan — boshqa hech narsa yozma.
+const SYSTEM_PROMPT = `Sen o'zbek tili constituency parsing mutaxassisisan.
+Foydalanuvchi o'zbek tilidagi gap beradi. Sen FAQAT quyidagi JSON formatida javob berasan. Boshqa hech narsa yozma.
 
-JSON format:
+=== MISOL ===
+Kirish: "Tarix hayotning haqiqiy o'qituvchisidir."
+
+Javob:
 {
-  "tree": { ... },
-  "tokens": [ ... ]
+  "tree": {
+    "label": "S",
+    "children": [
+      {
+        "label": "NP",
+        "children": [
+          { "label": "Tarix", "pos": "N" }
+        ]
+      },
+      {
+        "label": "VP",
+        "children": [
+          {
+            "label": "NP",
+            "children": [
+              { "label": "hayotning", "pos": "N" },
+              { "label": "haqiqiy", "pos": "JJ" },
+              { "label": "o'qituvchisidir", "pos": "N" }
+            ]
+          }
+        ]
+      },
+      { "label": ".", "pos": "PUNCT" }
+    ]
+  },
+  "tokens": [
+    { "sentenceId": 1, "tokenId": 1, "token": "Tarix",            "bi": "B", "lemma": "tarix",        "tag": "N",     "chunk": "B-NP" },
+    { "sentenceId": 1, "tokenId": 2, "token": "hayotning",        "bi": "B", "lemma": "hayot",        "tag": "N",     "chunk": "B-NP" },
+    { "sentenceId": 1, "tokenId": 3, "token": "haqiqiy",          "bi": "I", "lemma": "haqiqiy",      "tag": "JJ",    "chunk": "I-NP" },
+    { "sentenceId": 1, "tokenId": 4, "token": "o'qituvchisidir",  "bi": "I", "lemma": "o'qituvchi",   "tag": "N",     "chunk": "I-NP" },
+    { "sentenceId": 1, "tokenId": 5, "token": ".",                "bi": "B", "lemma": ".",             "tag": "PUNCT", "chunk": "O"    }
+  ]
 }
+=== MISOL TUGADI ===
 
-"tree" — rekursiv daraxt strukturasi:
-  Ichki tugun: { "label": "NP", "children": [...] }
-  Barg tugun (so'z): { "label": "so'z", "pos": "N" }
-  Barg tugunlarda "children" bo'lmaydi.
+QOIDALAR:
+1. "tree" — rekursiv daraxt. Ildiz har doim S.
+   - Ichki tugun: { "label": "NP", "children": [...] }
+   - Barg tugun (so'z): { "label": "so'z", "pos": "TAG" }  — children YO'Q
+2. "tokens" — gapning har bir so'zi va tinish belgisi tartib bo'yicha.
+3. Constituency teglari (ichki tugunlar): S, NP, VP, ADJP, ADVP, PP
+4. POS teglari (barg pos maydoni):
+   N=Ot, JJ=Sifat, VB=Fe'l, RR=Ravish, PRN=Olmosh, PUNCT=Tinish, MD=Modal, NUM=Son, CC=Bog'lovchi
+5. chunk maydoni: B-NP, I-NP, B-VP, I-VP, B-ADJP, I-ADJP, B-ADVP, I-ADVP, B-PP, I-PP, O
+6. bi maydoni: B (birikma boshi), I (birikma davomi)
+7. Tinish belgilarini ham tree va tokens ga qo'sh.
+8. FAQAT JSON qaytarasan. Izoh yozma.`;
 
-Constituency teglari (ichki tugunlar uchun label):
-  S    — Gap (har doim ildiz tugun)
-  NP   — Otli birikma
-  VP   — Fe'lli birikma
-  ADJP — Sifat birikmasi
-  ADVP — Ravish birikmasi (holli birikma)
-  PP   — Ko'makchili birikma
+// ─── State ────────────────────────────────────────────────────────────────────
 
-POS teglari (barg tugunlar uchun pos maydoni):
-  N     — Ot (noun)
-  JJ    — Sifat (adjective)
-  VB    — Fe'l (verb)
-  RR    — Ravish (adverb)
-  PRN   — Olmosh (pronoun)
-  PUNCT — Tinish belgisi
-  MD    — Modal so'z
-  NUM   — Son
-  CC    — Bog'lovchi
-
-"tokens" massivi — har bir so'z (tokenizatsiya tartibi bo'yicha):
-{
-  "sentenceId": 1,
-  "tokenId": 1,
-  "token": "so'z",
-  "bi": "B",
-  "lemma": "so'zning_asosiy_shakli",
-  "tag": "N",
-  "chunk": "B-NP"
-}
-  bi    : "B" (birikma boshi) yoki "I" (birikma davomi)
-  chunk : "B-NP","I-NP","B-VP","I-VP","B-ADJP","I-ADJP","B-ADVP","I-ADVP","B-PP","I-PP","O"
-  tag   : yuqoridagi POS teglari
-
-Faqat JSON qaytarasan. Boshqa hech narsa yozma.`;
+let _suggestions = [];
+let _matches     = [];
+let _lastData    = null;
+let _lastText    = '';
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 window.addEventListener('DOMContentLoaded', () => {
     const stored = localStorage.getItem('groq_key');
-    if (stored) document.getElementById('apiKey').value = stored;
+    if (stored) {
+        document.getElementById('apiKey').value = stored;
+        document.getElementById('keyStatus').textContent = '✓ Saqlangan';
+    }
+
+    loadSuggestions();
 
     document.getElementById('inputText').addEventListener('keydown', e => {
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') startAnalysis();
@@ -73,7 +92,7 @@ function saveKey() {
     localStorage.setItem('groq_key', key);
     const st = document.getElementById('keyStatus');
     st.textContent = '✓ Saqlandi';
-    setTimeout(() => { st.textContent = ''; }, 2000);
+    st.style.color = '#4ade80';
 }
 
 function getKey() {
@@ -81,12 +100,56 @@ function getKey() {
         || localStorage.getItem('groq_key') || '';
 }
 
-// ─── Local cache (localStorage) ───────────────────────────────────────────────
+// ─── Autocomplete from data.txt ───────────────────────────────────────────────
+
+async function loadSuggestions() {
+    try {
+        const res = await fetch('data.txt', { signal: AbortSignal.timeout(5000) });
+        if (!res.ok) return;
+        const text = await res.text();
+        _suggestions = text.split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 4);
+        setupAutocomplete();
+    } catch { /* data.txt yo'q — ok */ }
+}
+
+function setupAutocomplete() {
+    const input = document.getElementById('inputText');
+    const list  = document.getElementById('suggestionList');
+    if (!list) return;
+
+    input.addEventListener('input', () => {
+        const val = input.value.trim().toLowerCase();
+        list.innerHTML = '';
+        if (val.length < 3 || !_suggestions.length) { list.style.display = 'none'; return; }
+
+        _matches = _suggestions.filter(s => s.toLowerCase().includes(val)).slice(0, 12);
+        if (!_matches.length) { list.style.display = 'none'; return; }
+
+        list.innerHTML = _matches.map((s, i) =>
+            `<li onclick="pickSuggestion(${i})">${esc(s)}</li>`).join('');
+        list.style.display = 'block';
+    });
+
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.input-wrap')) list.style.display = 'none';
+    });
+}
+
+function pickSuggestion(i) {
+    const s = _matches[i];
+    if (!s) return;
+    document.getElementById('inputText').value = s;
+    document.getElementById('suggestionList').style.display = 'none';
+    startAnalysis();
+}
+
+// ─── Local cache ──────────────────────────────────────────────────────────────
 
 function cacheGet(text) {
     try {
-        const c = JSON.parse(localStorage.getItem('cp_cache') || '{}');
-        return c[text] || null;
+        return JSON.parse(localStorage.getItem('cp_cache') || '{}')[text] || null;
     } catch { return null; }
 }
 
@@ -95,7 +158,7 @@ function cacheSet(text, data) {
         const c = JSON.parse(localStorage.getItem('cp_cache') || '{}');
         c[text] = data;
         const keys = Object.keys(c);
-        if (keys.length > 100) delete c[keys[0]];
+        if (keys.length > 120) delete c[keys[0]];
         localStorage.setItem('cp_cache', JSON.stringify(c));
     } catch {}
 }
@@ -107,32 +170,45 @@ async function startAnalysis() {
     if (!text) { document.getElementById('inputText').focus(); return; }
 
     const key = getKey();
-    if (!key) { showErr('Iltimos, Groq API kalitini kiriting va "Saqlash" tugmasini bosing!'); return; }
+    if (!key) {
+        showErr('Groq API kalitini kiriting va "Saqlash" tugmasini bosing.\n' +
+                'Bepul kalit olish: https://console.groq.com');
+        return;
+    }
 
     const btn = document.getElementById('analyzeBtn');
     btn.disabled = true;
     btn.innerHTML = '<span class="loader"></span> Tahlil qilinmoqda...';
     hideErr();
     document.getElementById('cardResult').style.display = 'none';
+    document.getElementById('suggestionList').style.display = 'none';
 
     try {
-        // Check local cache first (offline-first)
         let data = cacheGet(text);
-        if (!data) {
+        if (data) {
+            renderAll(data, text);
+        } else {
             data = await callGroq(text, key);
             cacheSet(text, data);
+            renderAll(data, text);
         }
-        renderTree(data.tree);
-        renderTable(data.tokens);
-        document.getElementById('cardResult').style.display = 'block';
-        document.getElementById('cardResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
-
     } catch (e) {
         showErr(e.message);
     } finally {
-        btn.disabled = false;
+        btn.disabled  = false;
         btn.textContent = 'Tahlil qilish';
     }
+}
+
+function renderAll(data, text) {
+    _lastData = data;
+    _lastText = text;
+    renderTree(data.tree);
+    renderTable(data.tokens);
+    document.getElementById('cardResult').style.display = 'block';
+    setTimeout(() => {
+        document.getElementById('cardResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
 }
 
 function clearAll() {
@@ -140,17 +216,20 @@ function clearAll() {
     document.getElementById('cardResult').style.display = 'none';
     document.getElementById('treeBox').innerHTML = '';
     document.getElementById('tableBody').innerHTML = '';
+    document.getElementById('suggestionList').style.display = 'none';
     hideErr();
+    _lastData = null;
+    _lastText = '';
     document.getElementById('inputText').focus();
 }
 
-// ─── Groq API call ────────────────────────────────────────────────────────────
+// ─── Groq API ─────────────────────────────────────────────────────────────────
 
 async function callGroq(text, key) {
     let res;
     try {
         res = await fetch(GROQ_URL, {
-            method: 'POST',
+            method:  'POST',
             headers: {
                 'Content-Type':  'application/json',
                 'Authorization': `Bearer ${key}`,
@@ -173,8 +252,8 @@ async function callGroq(text, key) {
     if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         const msg = err.error?.message || `API xato: ${res.status}`;
-        if (res.status === 401) throw new Error('API kalit noto\'g\'ri. Groq kalingizni tekshiring.');
-        if (res.status === 429) throw new Error('So\'rov limiti oshdi. Bir oz kuting.');
+        if (res.status === 401) throw new Error('API kalit noto\'g\'ri yoki muddati o\'tgan.');
+        if (res.status === 429) throw new Error('So\'rovlar juda ko\'p. Bir oz kuting.');
         throw new Error(msg);
     }
 
@@ -184,64 +263,73 @@ async function callGroq(text, key) {
 
     let data;
     try { data = JSON.parse(content); }
-    catch { throw new Error('JSON parse xatosi: ' + content.slice(0, 120)); }
+    catch { throw new Error('JSON parse xatosi. Qayta urinib ko\'ring.'); }
 
-    if (!data.tree)   throw new Error('Groq javobida "tree" maydoni yo\'q.');
-    if (!data.tokens) throw new Error('Groq javobida "tokens" maydoni yo\'q.');
+    if (!data.tree)   throw new Error('Javobda "tree" yo\'q.');
+    if (!data.tokens) throw new Error('Javobda "tokens" yo\'q.');
     return data;
 }
 
-// ─── Constituency tree rendering ──────────────────────────────────────────────
+// ─── Constituency Tree (SVG) ──────────────────────────────────────────────────
+
+const NODE_COLORS = {
+    S:    '#dc2626',  // red  — root
+    NP:   '#1d4ed8',  // blue
+    VP:   '#16a34a',  // green
+    ADJP: '#9333ea',  // purple
+    ADVP: '#d97706',  // amber
+    PP:   '#0891b2',  // cyan
+};
+const LEAF_COLOR   = '#0f172a';  // word text
+const POS_COLOR    = '#64748b';  // pos tag below word
+const LINE_COLOR   = '#cbd5e1';
+
+function nodeColor(label) {
+    return NODE_COLORS[label] || '#475569';
+}
 
 function renderTree(tree) {
     const box = document.getElementById('treeBox');
     box.innerHTML = '';
-
     if (!tree) return;
 
-    // ── Layout constants ──────────────────────────────────────────────────────
-    const LEVEL_H  = 65;   // vertical gap between levels
-    const LEAF_MIN = 75;
-    const LEAF_MAX = 130;
-    const PAD_X    = 50;
-    const PAD_TOP  = 28;
-    const POS_GAP  = 26;   // px below word leaf for POS tag
+    // ── Constants ──
+    const LEVEL_H = 62;
+    const LEAF_W  = 82;
+    const PAD_X   = 40;
+    const PAD_TOP = 32;
+    const POS_DY  = 20;   // gap between word and pos tag
 
-    // ── Step 1: assign depth to every node ───────────────────────────────────
-    (function dep(node, d) {
-        node._d = d;
-        (node.children || []).forEach(c => dep(c, d + 1));
+    // ── Assign depth ──
+    (function d(n, depth) {
+        n._d = depth;
+        (n.children || []).forEach(c => d(c, depth + 1));
     })(tree, 0);
 
-    // ── Step 2: collect leaves & compute max depth ────────────────────────────
+    // ── Collect leaves & max depth ──
     const leaves = [];
     let maxD = 0;
-    (function walk(node) {
-        if (!node.children?.length) {
-            leaves.push(node);
-            if (node._d > maxD) maxD = node._d;
-        } else {
-            node.children.forEach(walk);
-        }
+    (function walk(n) {
+        if (!n.children?.length) { leaves.push(n); if (n._d > maxD) maxD = n._d; }
+        else n.children.forEach(walk);
     })(tree);
 
     if (!leaves.length) return;
 
-    // ── Step 3: assign x to leaves, propagate up ─────────────────────────────
-    const lw = Math.max(LEAF_MIN, Math.min(LEAF_MAX, 860 / leaves.length));
-    leaves.forEach((leaf, i) => { leaf._x = i * lw + lw / 2; });
+    // ── Assign X to leaves, propagate up ──
+    leaves.forEach((leaf, i) => { leaf._cx = i * LEAF_W + LEAF_W / 2; });
 
-    (function setX(node) {
-        if (node.children?.length) {
-            node.children.forEach(setX);
-            const xs = node.children.map(c => c._x);
-            node._x = (Math.min(...xs) + Math.max(...xs)) / 2;
+    (function setX(n) {
+        if (n.children?.length) {
+            n.children.forEach(setX);
+            const xs = n.children.map(c => c._cx);
+            n._cx = (Math.min(...xs) + Math.max(...xs)) / 2;
         }
     })(tree);
 
-    // ── Step 4: compute SVG size ──────────────────────────────────────────────
-    const W = leaves.length * lw + PAD_X * 2;
-    const H = PAD_TOP + maxD * LEVEL_H + 20 + POS_GAP + 14;
+    // ── SVG size ──
+    const W = leaves.length * LEAF_W + PAD_X * 2;
+    const H = PAD_TOP + maxD * LEVEL_H + POS_DY + 18 + 10;
 
     const NS  = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(NS, 'svg');
@@ -257,58 +345,65 @@ function renderTree(tree) {
         return el;
     };
 
-    // x / y of a node's centre
-    const nx = n => PAD_X + n._x;
-    const ny = n => PAD_TOP + (n.children?.length ? n._d : maxD) * LEVEL_H;
+    // x/y helpers — leaves always at bottom row
+    const nx  = n => PAD_X + n._cx;
+    const ny  = n => PAD_TOP + (n.children?.length ? n._d : maxD) * LEVEL_H;
 
-    // ── Step 5: draw (lines layer first, labels on top) ──────────────────────
     const gLines  = mk('g');
     const gLabels = mk('g');
 
-    (function draw(node) {
-        const x      = nx(node);
-        const y      = ny(node);
-        const isLeaf = !node.children?.length;
-        const isRoot = node._d === 0;
+    (function draw(n) {
+        const x      = nx(n);
+        const y      = ny(n);
+        const isLeaf = !n.children?.length;
+        const isRoot = n._d === 0;
+        const col    = isLeaf ? LEAF_COLOR : nodeColor(n.label);
 
         // Lines to children
         if (!isLeaf) {
-            node.children.forEach(child => {
+            n.children.forEach(child => {
                 gLines.appendChild(mk('line', {
-                    x1: x,       y1: y + 11,
-                    x2: nx(child), y2: ny(child) - 11,
-                    stroke:           '#cbd5e1',
-                    'stroke-width':   '1.8',
-                    'stroke-linecap': 'round',
+                    x1: x,       y1: y + 12,
+                    x2: nx(child), y2: ny(child) - 12,
+                    stroke: LINE_COLOR, 'stroke-width': '1.6', 'stroke-linecap': 'round',
                 }));
                 draw(child);
             });
         }
 
-        // Node label
-        gLabels.appendChild(mk('text', {
-            x,
-            y,
-            'text-anchor':       'middle',
-            'dominant-baseline': 'middle',
-            'font-family':       'Inter, sans-serif',
-            'font-size':         isRoot ? '17' : isLeaf ? '14' : '14',
-            'font-weight':       isRoot ? '800' : '700',
-            fill: isRoot ? '#dc2626' : isLeaf ? '#1d4ed8' : '#1e40af',
-        }, node.label));
+        // Node label background circle for inner nodes
+        if (!isLeaf) {
+            const r = isRoot ? 15 : 12;
+            gLabels.appendChild(mk('circle', {
+                cx: x, cy: y, r,
+                fill:         col + '18',
+                stroke:       col,
+                'stroke-width': '1.5',
+            }));
+        }
 
-        // POS tag below word leaf
-        if (isLeaf && node.pos) {
+        // Label text
+        gLabels.appendChild(mk('text', {
+            x, y: y + (isLeaf ? 0 : 4),
+            'text-anchor':       'middle',
+            'dominant-baseline': isLeaf ? 'middle' : 'auto',
+            'font-family':       'Inter, sans-serif',
+            'font-size':         isRoot ? '15' : isLeaf ? '13' : '12',
+            'font-weight':       isRoot ? '800' : isLeaf ? '600' : '700',
+            fill: col,
+        }, n.label));
+
+        // POS tag below leaf word
+        if (isLeaf && n.pos) {
             gLabels.appendChild(mk('text', {
-                x,
-                y: y + POS_GAP,
+                x, y: y + POS_DY,
                 'text-anchor':       'middle',
                 'dominant-baseline': 'middle',
                 'font-family':       'JetBrains Mono, monospace',
-                'font-size':         '11',
+                'font-size':         '10',
                 'font-weight':       '600',
-                fill: '#94a3b8',
-            }, node.pos));
+                fill: POS_COLOR,
+            }, n.pos));
         }
     })(tree);
 
@@ -317,26 +412,26 @@ function renderTree(tree) {
     box.appendChild(svg);
 }
 
-// ─── Linguistic table rendering ───────────────────────────────────────────────
+// ─── Linguistic table ─────────────────────────────────────────────────────────
 
 function renderTable(tokens) {
     const body = document.getElementById('tableBody');
     body.innerHTML = tokens.map(t => {
-        const biCls    = t.bi === 'B' ? 'bi-b' : 'bi-i';
-        const chunkCls = getChunkClass(t.chunk);
+        const biClass    = t.bi === 'B' ? 'bi-b' : t.bi === 'I' ? 'bi-i' : 'bi-o';
+        const chunkClass = chunkCls(t.chunk);
         return `<tr>
-            <td>${esc(t.sentenceId)}</td>
-            <td>${esc(t.tokenId)}</td>
-            <td><strong>${esc(t.token)}</strong></td>
-            <td class="${biCls}">${esc(t.bi)}</td>
+            <td class="cell-center">${esc(t.sentenceId)}</td>
+            <td class="cell-center">${esc(t.tokenId)}</td>
+            <td class="cell-token">${esc(t.token)}</td>
+            <td class="cell-center"><span class="${biClass}">${esc(t.bi)}</span></td>
             <td>${esc(t.lemma)}</td>
             <td><span class="tag-badge">${esc(t.tag)}</span></td>
-            <td><span class="chunk-badge ${chunkCls}">${esc(t.chunk)}</span></td>
+            <td><span class="chunk-badge ${chunkClass}">${esc(t.chunk)}</span></td>
         </tr>`;
     }).join('');
 }
 
-function getChunkClass(chunk) {
+function chunkCls(chunk) {
     if (!chunk || chunk === 'O') return 'chunk-o';
     const ph = (chunk.split('-')[1] || '').toUpperCase();
     if (ph === 'NP')   return 'chunk-np';
@@ -347,13 +442,6 @@ function getChunkClass(chunk) {
     return 'chunk-o';
 }
 
-function esc(s) {
-    return String(s ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-}
-
 // ─── Copy table ───────────────────────────────────────────────────────────────
 
 function copyTable(btn) {
@@ -362,7 +450,6 @@ function copyTable(btn) {
         .map(r => Array.from(r.querySelectorAll('th,td'))
             .map(c => c.innerText.trim()).join('\t'))
         .join('\n');
-
     navigator.clipboard.writeText(text).then(() => {
         const old = btn.textContent;
         btn.textContent = '✓ Nusxa olindi!';
@@ -380,28 +467,33 @@ function downloadSVG() {
     clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
 
     const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-    style.textContent = "text { font-family: Inter, sans-serif; }";
+    style.textContent = "text{font-family:Inter,sans-serif}";
     clone.insertBefore(style, clone.firstChild);
 
     const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    bg.setAttribute('width', '100%');
-    bg.setAttribute('height', '100%');
+    bg.setAttribute('width', '100%'); bg.setAttribute('height', '100%');
     bg.setAttribute('fill', '#f8fafc');
     clone.insertBefore(bg, clone.firstChild);
 
     const blob = new Blob([new XMLSerializer().serializeToString(clone)], { type: 'image/svg+xml' });
-    const a    = document.createElement('a');
-    a.href     = URL.createObjectURL(blob);
-    a.download = 'constituency_tree.svg';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    const name = (_lastText || 'tree').slice(0, 30).replace(/[\\/:*?"<>|]/g, '_');
+    a.download = `${name}.svg`;
     a.click();
     URL.revokeObjectURL(a.href);
 }
 
-// ─── Error helpers ────────────────────────────────────────────────────────────
+// ─── Utility ──────────────────────────────────────────────────────────────────
+
+function esc(s) {
+    return String(s ?? '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
 function showErr(msg) {
     const box = document.getElementById('errBox');
-    box.textContent = 'Xato: ' + msg;
+    box.innerHTML = esc(msg).replace(/\n/g, '<br>');
     box.style.display = 'block';
 }
 
