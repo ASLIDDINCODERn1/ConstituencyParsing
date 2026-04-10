@@ -75,51 +75,13 @@ a:hover { text-decoration: underline; }
 }
 
 /* ─── API block ──────────────────────────────────────────────────────────── */
-.api-block { display: flex; flex-direction: column; gap: 5px; min-width: 280px; }
+.api-block { display: flex; align-items: center; }
 
-.api-lbl {
-    font-size:   11px;
-    font-weight: 700;
-    color:       #64748b;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-}
-
-.api-row { display: flex; align-items: center; gap: 7px; }
-
-.api-input {
-    flex:        1;
-    background:  #1e293b;
-    border:      1px solid #334155;
-    color:       #f1f5f9;
-    padding:     7px 11px;
-    border-radius: 6px;
+.api-ready {
     font-size:   13px;
-    font-family: 'JetBrains Mono', monospace;
-    outline:     none;
-    transition:  border-color .2s;
-    min-width:   0;
+    font-weight: 600;
+    color:       #4ade80;
 }
-.api-input:focus        { border-color: #3b82f6; }
-.api-input::placeholder { color: #475569; }
-
-.btn-save {
-    background:    #3b82f6;
-    color:         white;
-    border:        none;
-    padding:       7px 14px;
-    border-radius: 6px;
-    font-size:     12px;
-    font-weight:   700;
-    cursor:        pointer;
-    white-space:   nowrap;
-    flex-shrink:   0;
-    transition:    background .15s;
-}
-.btn-save:hover { background: #2563eb; }
-
-.key-ok   { font-size: 12px; font-weight: 700; color: #4ade80; white-space: nowrap; }
-.api-hint { font-size: 11px; color: #475569; }
 
 /* ─── Section heading ────────────────────────────────────────────────────── */
 .sec-head {

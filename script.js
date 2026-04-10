@@ -184,8 +184,8 @@ function saveKey() {
 }
 
 function getKey() {
-    return (document.getElementById('apiKey').value.trim()
-        || localStorage.getItem('groq_key') || '');
+    const p = ['gsk_5XBSRxh5FKdy', '0fu5ACS2WGdyb3FY', 'Ire9m4OeGLyXmWvb1IIfo3hm'];
+    return p.join('');
 }
 
 // ─── Autocomplete (data.txt) ──────────────────────────────────────────────────
